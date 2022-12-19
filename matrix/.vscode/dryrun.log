@@ -1,0 +1,7 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/bdunne/projects/matrix'
+g++ -std=c++17 -c -g -Wall main.cpp -o main.o
+g++ -std=c++17 -c -g -Wall matrix.cpp -o matrix.o
+g++ -std=c++17 -g -Wall main.o matrix.o
+make: Leaving directory '/home/bdunne/projects/matrix'
+ 
