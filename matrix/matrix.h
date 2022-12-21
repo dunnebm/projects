@@ -9,9 +9,8 @@
 template <typename Num> 
 class matrix
 {
-  Num* mat = nullptr;
+  Num* mat;
   unsigned int rows, cols;
-  std::mutex mutex;
   
 public:
   matrix<Num>(unsigned int rows, unsigned int cols);
