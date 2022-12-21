@@ -5,7 +5,19 @@ template <typename Num>
 matrix<Num>::matrix(unsigned int rows, unsigned int cols)
 :rows(rows), cols(cols)
 {
+  // Do not allow zero as a dimension, and do not allow 1x1 matrices.
+  if (rows == 0 || cols == 0 || (rows == 1 && cols == 1))
+    throw "Invalid dimensions!";
+
   mat = new Num[rows*cols];
+
+  for (unsigned int i = 0; i < rows; ++i)
+  {
+    for (unsigned int j = 0; j < cols; ++j)
+    {
+      (*this)(i,j) = (Num) 0;
+    }
+  }
 }
 
 template <typename Num>
@@ -153,12 +165,19 @@ matrix<Num> matrix<Num>::inverse() const
   if (rows != cols)
     throw "Not a square matrix!";
   
+  // Augment *this matrix with an identity matrix 
+  // that has the same dimensions.
   matrix<Num> augmat = augment(matrix<Num>::identity(rows));
 
+  // The result of putting the augmented matrix in RREF
+  // is that the identity matrix that was augmented with *this matrix
+  // will now be the inverse of *this.
   augmat = augmat.rref();
 
   matrix<Num> retval(rows, cols);
 
+  // The augmented matrix contains two matrices side-by-side; extract
+  // right-most matrix because it represents the inverse of *this.
   for (unsigned int i = 0; i < rows; ++i)
   {
     for (unsigned int j = 0; j < cols; ++j)
@@ -197,10 +216,15 @@ matrix<Num> matrix<Num>::rref() const
     // perform Guass-Jordan reduction
     for (unsigned int j = 0; j < rows; ++j)
     {
+      // Don't reduce row i, and no need to reduce a row if its ith column
+      // is already zero.
       if (i == j || retval(j,i) == 0) continue;
 
       Num scale_factor = retval(i,i) / retval(j,i);
 
+      // Multiply the scale_factor to the jth row and subtract that
+      // row by ith row. This will have the effect of zeroing the 
+      // retval(j,i) entry 
       for (unsigned int k = 0; k < cols; ++k)
       {
         retval(j,k) = scale_factor*retval(j,k) - retval(i,k);
@@ -385,6 +409,10 @@ matrix<Num> matrix<Num>::operator/(const Num& num) const
 template <typename Num>
 bool matrix<Num>::operator==(const matrix<Num>& rhs) const
 {
+  // If the difference between two valued are within this value,
+  // then they are considered equal.
+  const double epsilon = 1e-8;
+
   if (rows != rhs.rows || cols != rhs.cols)
     return false;
 
@@ -392,7 +420,8 @@ bool matrix<Num>::operator==(const matrix<Num>& rhs) const
   {
     for (unsigned int j = 0; j < cols; ++j)
     {
-      if ((*this)(i,j) != rhs(i,j))
+      if ((*this)(i,j) >= rhs(i,j) + epsilon ||
+          (*this)(i,j) <= rhs(i,j) - epsilon)
         return false;
     }
   }
