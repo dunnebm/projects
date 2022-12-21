@@ -9,7 +9,7 @@
 template <typename Num> 
 class matrix
 {
-  Num* mat;
+  Num* mat = nullptr;
   unsigned int rows, cols;
   
 public:

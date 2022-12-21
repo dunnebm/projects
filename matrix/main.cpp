@@ -174,9 +174,14 @@ bool testMatrixAddition()
     {7.0, 8.0}
   };
 
-  auto m3 = m1 + m2;
+  matrix<double> expected = {
+    { 6.0,  8.0},
+    {10.0, 12.0}
+  };
 
-  return true;
+  auto result = m1 + m2;
+
+  return result == expected;
 }
 
 bool testMatrixSubtraction()
@@ -191,9 +196,14 @@ bool testMatrixSubtraction()
     {7.0, 8.0}
   };
 
-  auto m3 = m1 - m2;
+  matrix<double> expected = {
+    {-4.0, -4.0},
+    {-4.0, -4.0}
+  };
 
-  return true;
+  auto result = m1 - m2;
+
+  return result == expected;
 }
 
 bool testTranspose()

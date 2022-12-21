@@ -29,6 +29,10 @@ matrix<Num>::matrix(const std::initializer_list<std::initializer_list<Num>>& lis
   rows = list.size();
   cols = iter1->size();
 
+  // Do not allow zero as a dimension, and do not allow 1x1 matrices.
+  if (rows == 0 || cols == 0 || (rows == 1 && cols == 1))
+    throw "Invalid dimensions!";
+
   mat = new Num[rows*cols];
 
   for (; iter1 < list.end(); ++iter1)
