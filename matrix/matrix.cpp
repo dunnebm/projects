@@ -5,8 +5,8 @@ template <typename Num>
 matrix<Num>::matrix(unsigned int rows, unsigned int cols)
 :rows(rows), cols(cols)
 {
-  // Do not allow zero as a dimension, and do not allow 1x1 matrices.
-  if (rows == 0 || cols == 0 || (rows == 1 && cols == 1))
+  // Do not allow dimensions less than 2.
+  if (rows < 2 || cols < 2)
     throw "Invalid dimensions!";
 
   mat = new Num[rows*cols];
@@ -29,8 +29,8 @@ matrix<Num>::matrix(const std::initializer_list<std::initializer_list<Num>>& lis
   rows = list.size();
   cols = iter1->size();
 
-  // Do not allow zero as a dimension, and do not allow 1x1 matrices.
-  if (rows == 0 || cols == 0 || (rows == 1 && cols == 1))
+  // Do not dimensions less than 2
+  if (rows < 2 || cols < 2)
     throw "Invalid dimensions!";
 
   mat = new Num[rows*cols];
