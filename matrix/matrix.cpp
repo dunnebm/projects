@@ -1,5 +1,10 @@
 #include "matrix.h"
 #include <iostream>
+#include <cstdlib>
+#include <limits>
+#include <cmath>
+
+using size_t = std::size_t;
 
 template <typename Num>
 matrix<Num>::matrix(unsigned int rows, unsigned int cols)
@@ -29,7 +34,7 @@ matrix<Num>::matrix(const std::initializer_list<std::initializer_list<Num>>& lis
   rows = list.size();
   cols = iter1->size();
 
-  // Do not dimensions less than 2
+  // Do not allow dimensions less than 2
   if (rows < 2 || cols < 2)
     throw "Invalid dimensions!";
 
@@ -48,6 +53,190 @@ matrix<Num>::matrix(const std::initializer_list<std::initializer_list<Num>>& lis
     for (unsigned int j = 0; j < cols; ++j, ++iter2)
     {
       (*this)(i,j) = *iter2;
+    }
+  }
+}
+
+static bool isDigit(char c)
+{
+  return c >= '0' && c <= '9';
+}
+
+template <typename Num>
+matrix<Num>::matrix(std::string csv)
+{
+  unsigned int row_count = 0, col_count = 1;
+
+  // Used to assign the first row's column count member variable rows
+  bool first_row_read = false;
+
+  /* At the start of a new entry all of the flags below are reset */
+
+  // This flag is raised when a decimal digit is found in an entry.
+  // However, it will be reset if an exponent 'e' is found so it can be reused
+  // to detect a number in the exponent
+  bool digit_found = false;
+
+  // There can only be one decimal point per number, this flag is used to
+  // spot multiple occurences.
+  bool decimal_found = false;
+
+  // Signs can only occur at the beginning of a number and an exponent;
+  // only minus signs are allowed at the beginning of numbers, but plus or
+  // minus signs may appear at the start of an exponent.
+  bool sign_found = false;
+
+  // Denotes the start of an exponent
+  bool exponent_found = false;
+
+  // This flag is used to detect multiple numbers in an entry.
+  bool entry_filled = false;
+
+  // check the format, and if formatted corectly, save the dimensions
+  // for memory allocation.
+  for (size_t i = 0; i < csv.size(); ++i)
+  {
+    if (csv[i] == ',')
+    {
+      if (digit_found)
+        ++col_count;
+      else
+        throw "All entries must be filled";
+
+      // reset flags for next entry
+      digit_found = false;
+      decimal_found = false;
+      entry_filled = false;
+      exponent_found = false;
+      sign_found = false;
+    }
+    else if (isDigit(csv[i]))
+    {
+      if (entry_filled)
+        throw "There are two numbers in one entry spot";
+      digit_found = true;
+    }
+    else if (csv[i] == '.')
+    {
+      if (decimal_found)
+        throw "There are two decimal points in this entry";
+      if (exponent_found)
+        throw "Decimals are not allowed in the exponent";
+      if (entry_filled)
+        throw "There are two numbers in one entry spot";
+      decimal_found = true;
+    }
+    else if (csv[i] == ' ')
+    {
+      if (digit_found)
+        entry_filled = true;
+      else if (decimal_found)
+        throw "There can't be space between decimal points and digits";
+      else if (sign_found)
+        throw "There can't be space between a sign and the number";
+      else if (exponent_found)
+        throw "This exponent does not have a number in it";
+    }
+    else if (csv[i] == '-')
+    {
+      if (digit_found || decimal_found)
+        throw "Incorrect location for a minus sign";
+      if (sign_found)
+        throw "Too many signs in this entry";
+
+      sign_found = true;
+    }
+    else if (csv[i] == '+')
+    {
+      if (exponent_found && !digit_found)
+        sign_found = true;
+      else
+        throw "Incorrect location for a plus sign";
+    }
+    else if (csv[i] == 'e')
+    {
+      if (!digit_found)
+        throw "Invalid number";
+      if (entry_filled)
+        throw "Invalid entry";
+
+      exponent_found = true;
+
+      // reset flags so they can be used for the exponent
+      digit_found = false;
+      decimal_found = false;
+      sign_found = false;
+    }
+    else if (csv[i] == '\n')
+    {
+      if (!digit_found && !decimal_found && !sign_found && !exponent_found && col_count == 1)
+        continue; //This is an empty row, so nothing to do 
+      
+      if (first_row_read && col_count != cols)
+        throw "This row does not have the same number of columns as the first row";
+      
+      if (!first_row_read)
+      {
+        if (col_count < 2)
+          throw "Column count must be greater than or equal to 2";
+        cols = col_count;
+        first_row_read = true;
+      }
+      
+      // reset flags for next entry
+      digit_found = false;
+      decimal_found = false;
+      sign_found = false;
+      exponent_found = false;
+      entry_filled = false;
+      col_count = 1; // set to 1 because I increment every comma, and there is one less comma then column
+      ++row_count;
+    }
+    else
+      throw "Unexpected character";
+    
+    // Just in case the last row does not have a newline, increment
+    // the row count here
+    if (i == csv.size() - 1 && csv[i] != '\n')
+    {
+      if (digit_found && first_row_read && (col_count != cols))
+        throw "Every row must have an equal number of columns";
+      if (digit_found && first_row_read && (col_count == cols))
+        ++row_count;
+    }
+  }
+
+  if (row_count < 2)
+    throw "Row count must be greater than or equal to 2";
+
+  rows = row_count;
+
+  mat = new Num[rows*cols];
+
+  row_count = 0;
+  col_count = 0;
+  char* end; // used for strtod()
+
+  // Just in case there is additional newlines, this flag is
+  // used so empty rows do not increment the row_count.
+  bool empty_row = true;
+
+  // Parse the numbers from the string and assign 
+  // them to their respective matrix locations
+  for (size_t i = 0; i < csv.size(); ++i)
+  {
+    if (isDigit(csv[i]) || csv[i] == '.' || csv[i] == '-')
+    {
+      (*this)(row_count, col_count) = static_cast<Num>(strtod(&csv[i], &end));
+      ++col_count;
+      i += static_cast<size_t>(end - &csv[i]);
+      empty_row = false;
+    }
+    if (csv[i] == '\n' && !empty_row)
+    {
+      ++row_count;
+      col_count = 0;
+      empty_row = true;
     }
   }
 }
@@ -411,22 +600,30 @@ matrix<Num> matrix<Num>::operator/(const Num& num) const
 }
 
 template <typename Num>
+static bool almostEqual(Num a, Num b, Num epsilon)
+{
+  auto threshold = std::numeric_limits<Num>::min();
+  auto min = std::min(std::abs(a), std::abs(b));
+
+  if (std::abs(min) == 0.0)
+    return std::abs(a-b) < epsilon;
+
+  return (std::abs(a-b) / std::max(threshold, min)) < epsilon;
+}
+
+template <typename Num>
 bool matrix<Num>::operator==(const matrix<Num>& rhs) const
 {
-  // If the difference between two valued are within this value,
-  // then they are considered equal.
-  const double epsilon = 1e-8;
-
   if (rows != rhs.rows || cols != rhs.cols)
     return false;
+
+  auto epsilon = std::numeric_limits<Num>::epsilon();
 
   for (unsigned int i = 0; i < rows; ++i)
   {
     for (unsigned int j = 0; j < cols; ++j)
     {
-      if ((*this)(i,j) >= rhs(i,j) + epsilon ||
-          (*this)(i,j) <= rhs(i,j) - epsilon)
-        return false;
+      almostEqual((*this)(i,j), rhs(i,j), epsilon);
     }
   }
 
@@ -459,27 +656,35 @@ matrix<Num> matrix<Num>::identity(unsigned int size)
 }
 
 template <typename Num>
-std::ostream& matrix<Num>::out(std::ostream& os) const
+std::string matrix<Num>::to_string() const
 {
-  os << "[";
-
+  std::string str;
   for (unsigned int i = 0; i < rows; ++i)
   {
-    if (i == 0)
-      os << "[";
-    else
-      os << " [";
-    
-    unsigned int j;
-    for (j = 0; j < cols - 1; ++j)
+    for (unsigned int j = 0; j < cols; ++j)
     {
-      os << (*this)(i,j) << ", ";
+      str += std::to_string(static_cast<double>((*this)(i,j)));
+      if (j < cols - 1)
+        str += ',';
     }
+    str += '\n';
+  }
+  return str;
+}
 
-    if (i < rows - 1)
-      os << (*this)(i,j) << "]" << std::endl;
-    else
-      os << (*this)(i,j) << "]]" << std::endl;
+template <typename Num>
+std::ostream& matrix<Num>::out(std::ostream& os) const
+{
+  for (unsigned int i = 0; i < rows; ++i)
+  {
+    for (unsigned int j = 0; j < cols; ++j)
+    {
+      if (j == cols - 1)
+        os << (*this)(i,j);
+      else
+        os  << (*this)(i,j) << ",";
+    }
+    os << std::endl;
   }
 
   return os;

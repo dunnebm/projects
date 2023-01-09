@@ -1,256 +1,375 @@
+/*
+  Author: Brandon Dunne
+
+  This program test my matrix class by randomly generating matrices and performing operations
+  on them, and then comparing their results with the Verifier.
+  The Verifier gets its results from the Numpy API. Since this is a python API, I wrote a python
+  script that communitcates with the Verifier server-client style.
+*/
+
 #include "matrix.h"
 #include <iostream>
+#include <string>
+#include <random>
+#include <regex>
+#include <cctype>
+#include <limits>
+#include <cmath>
+#include "Verifier.h"
 
-using namespace std;
+static bool testScalarMultiplication(Verifier& verifier);
+static bool testScalarDivision(Verifier& verifier);
+static bool testScalarAddition(Verifier& verifier);
+static bool testScalarSubtraction(Verifier& verifier);
+static bool testMatrixMultiplication(Verifier& verifier);
+static bool testMatrixAddition(Verifier& verifier);
+static bool testMatrixSubtraction(Verifier& verifier);
+static bool testInverse(Verifier& verifier);
+static bool testDeterminant(Verifier& verifier);
 
-static bool testScalarMultiplication();
-static bool testScalarDivision();
-static bool testScalarAddition();
-static bool testScalarSubtraction();
-static bool testMatrixMultiplication();
-static bool testMatrixAddition();
-static bool testMatrixSubtraction();
-static bool testTranspose();
-static bool testInverse();
-static bool testDeterminant();
+static std::regex regx{R"(<(matrix|scalar)>([\.\d\s,e\+-]*?)</\1>)"};
 
 int main()
-{
-  if (!testScalarAddition())
-    cerr << "Scalar addition failed!" << endl;
-  else
-    cout << "Scalar addition passed!" << endl;
+{ 
+  Verifier verifier{4096};
+  if (verifier.failed())
+  {
+    std::cerr << "Failed to construct Verifier!\n";
+    return 1;
+  }
 
-  if (!testScalarSubtraction())
-    cerr << "Scalar sutraction failed!" << endl;
-  else
-    cout << "Scalar subtraction passed!" << endl;
+  try {
+    if (!testScalarAddition(verifier))
+      std::cerr << "Scalar addition failed!\n";
+    else
+      std::cout << "Scalar addition passed!\n";
 
-  if (!testScalarMultiplication())
-    cerr << "Scalar multiplication failed!" << endl;
-  else
-    cout << "Scalar multiplication passed!" << endl;
+    if (!testScalarSubtraction(verifier))
+      std::cerr << "Scalar subtraction failed!\n";
+    else
+      std::cout << "Scalar subtraction passed!\n";
 
-  if (!testScalarDivision())
-    cerr << "Scalar division failed!" << endl;
-  else
-    cout << "Scalar division passed!" << endl;
+    if (!testScalarMultiplication(verifier))
+      std::cerr << "Scalar multiplication failed!\n";
+    else
+      std::cout << "Scalar multiplication passed!\n";
 
-  if (!testMatrixAddition())
-    cerr << "Matrix addition failed!" << endl;
-  else
-    cout << "Matrix addition passed!" << endl;
+    if (!testScalarDivision(verifier))
+      std::cerr << "Scalar division failed!\n";
+    else
+      std::cout << "Scalar division passed!\n";
 
-  if (!testMatrixSubtraction())
-    cerr << "Matrix subtraction failed!" << endl;
-  else
-    cout << "Matrix subtraction passed!" << endl;
+    if (!testMatrixAddition(verifier))
+      std::cerr << "Matrix addition failed!\n";
+    else
+      std::cout << "Matrix addition passed!\n";
 
-  if (!testMatrixMultiplication())
-    cerr << "Matrix multiplication failed!" << endl;
-  else
-    cout << "Matrix multiplication passed!" << endl;
+    if (!testMatrixSubtraction(verifier))
+      std::cerr << "Matrix subtraction failed!\n";
+    else
+      std::cout << "Matrix subtraction passed!\n";
 
-  if (!testTranspose())
-    cerr << "Transpose failed!" << endl;
-  else
-    cout << "Transpose passed!" << endl;
-  
-  if (!testInverse())
-    cerr << "Inverse failed!" << endl;
-  else
-    cout << "Inverse passed!" << endl;
+    if (!testMatrixMultiplication(verifier))
+      std::cerr << "Matrix multiplication failed!\n";
+    else
+      std::cout << "Matrix multiplication passed!\n";
 
-  if (!testDeterminant())
-    cerr << "Determinant failed!" << endl;
-  else
-    cout << "Determinant passed!" << endl;
+    if (!testInverse(verifier))
+      std::cerr << "Inverse failed!\n";
+    else
+      std::cout << "Inverse passed!\n";
+
+    if (!testDeterminant(verifier))
+      std::cerr << "Determinant failed!\n";
+    else
+      std::cout << "Determinant passed!\n";
+  } 
+  catch (const char* error)
+  {
+    std::cerr << error << '\n';
+  }
+
+  verifier.send_request("<exit></exit>");
 
   return 0;
 }
 
-bool testScalarAddition()
+/**
+ * Format the data so the python script can interpret it
+ */
+static std::string formatArgs(const matrix<double>& m1, const matrix<double>& m2)
 {
-  matrix<double> m1 = {
-    { 1.0,  9.0, 10.0},
-    {23.0, 58.0, 99.0},
-    {12.0, 13.0, 33.0}
-  };
+  std::string xml = "<matrix>\n" + m1.to_string() + "</matrix>\n";
+  xml += "<matrix>\n" + m2.to_string() + "</matrix>\n";
+  return xml;
+}
 
-  matrix<double> expected = {
-    {11.0, 19.0,  20.0},
-    {33.0, 68.0, 109.0},
-    {22.0, 23.0,  43.0}
-  };
+static std::string formatArgs(const matrix<double>& m, double scalar)
+{
+  std::string xml = "<matrix>\n" + m.to_string() + "</matrix>\n";
+  xml += "<scalar> " + std::to_string(scalar) + " </scalar>\n";
+  return xml;
+}
 
-  auto result = m1 + 10;
+static std::string formatArg(const matrix<double>& m)
+{
+  return "<matrix>\n" + m.to_string() + "</matrix>\n";
+}
+
+/**
+ * Parse the result from the Verifier and use that data to instantiate
+ * a matrix
+ */
+static matrix<double> parseMatrixResult(std::string& xml_result)
+{
+  std::sregex_iterator match_iter{xml_result.begin(), xml_result.end(), regx};
+  std::sregex_iterator last_match;
+
+  if (match_iter == last_match) throw "Empty result";
+
+  std::string result = (*match_iter).str(2);
+
+  ++match_iter;
+
+  if (match_iter != last_match) throw "Too many results";
+
+  return matrix<double>{result};
+}
+
+/**
+ * Same as parseMatrixResult, but just convert the string to a double
+ */
+static double parseScalarResult(std::string& xml_result)
+{
+  std::sregex_iterator match_iter{xml_result.begin(), xml_result.end(), regx};
+  std::sregex_iterator last_match;
+
+  if (match_iter == last_match) throw "Empty result";
+
+  std::string str{(*match_iter).str(2)};
+  
+  ++match_iter;
+
+  if (match_iter != last_match) throw "Too many results";
+
+  double result = strtod(str.c_str(), nullptr);
+
+  return result;
+}
+
+/**
+ * This function generates a double that is in the range [-1e9, 1e9].
+ */
+static double randDouble()
+{
+  std::random_device rand;
+
+  // generate values from [-1,1]
+  double normalized = 2.0*(static_cast<double>(rand()) / rand.max()) - 1.0;
+
+  // expand range [-1e9,1e9]
+  return normalized * 1e9;
+}
+
+/**
+ * This function creates a matrix with randomly generated entries.
+ */
+static matrix<double> generateMatrix(unsigned int rows, unsigned int cols)
+{
+  matrix<double> mat{rows, cols};
+  for (unsigned int i = 0; i < rows; ++i)
+  {
+    for (unsigned int j = 0; j < cols; ++j)
+    {
+      mat(i,j) = randDouble();
+    }
+  }
+  
+  return mat;
+}
+
+/**
+ * This function is used to generate matrix dimensions.
+ * It only generates integers in the range [2,10]
+ */
+static inline unsigned int randUint()
+{
+  std::random_device rand;
+  return (rand() % 8) + 2;
+}
+
+bool testScalarAddition(Verifier& verifier)
+{
+  std::random_device rand;
+  unsigned int rows = randUint(), cols = randUint();
+  matrix<double> m1 = generateMatrix(rows, cols);
+  double scalar = randDouble();
+
+  std::string xml_request = "<add>\n";
+  xml_request += formatArgs(m1, scalar);
+  xml_request += "</add>\n";
+
+  std::string xml_response = verifier.send_request(xml_request);
+
+  matrix<double> expected = parseMatrixResult(xml_response);
+
+  auto result = m1 + scalar;
 
   return result == expected;
 }
 
-bool testScalarSubtraction()
-{
-  matrix<double> m1 = {
-    { 8.0, 11.0, 42.0, 59.0},
-    {80.0,  2.0,  3.0, 17.0}
-  };
+bool testScalarSubtraction(Verifier& verifier)
+{ 
+  std::random_device rand;
+  unsigned int rows = randUint(), cols = randUint();
+  matrix<double> m1 = generateMatrix(rows, cols);
+  double scalar = randDouble();
+ 
+  std::string xml_request = "<sub>\n";
+  xml_request += formatArgs(m1, scalar);
+  xml_request += "</sub>\n";
 
-  matrix<double> expected = {
-    { 1.0,  4.0, 35.0, 52.0},
-    {73.0, -5.0, -4.0, 10.0}
-  };
+  auto xml_result = verifier.send_request(xml_request);
 
-  auto result = m1 - 7;
+  auto expected = parseMatrixResult(xml_result);
 
-  return result == expected;
-}
-
-bool testScalarMultiplication()
-{
-  matrix<double> m1 = {
-    { 58.0,  64.0, 80.0},
-    {139.0, 154.0, 99.0}
-  };
-
-  matrix<double> expected = {
-    {406.0,  448.0, 560.0},
-    {973.0, 1078.0, 693.0}
-  };
-
-  auto result = m1 * 7;
+  auto result = m1 - scalar;
 
   return result == expected;
 }
 
-bool testScalarDivision()
+bool testScalarMultiplication(Verifier& verifier)
 {
-  matrix<double> m1 = {
-    {406.0,  448.0, 560.0},
-    {973.0, 1078.0, 693.0}
-  };
+  std::random_device rand;
+  unsigned int rows = randUint(), cols = randUint();
+  auto mat = generateMatrix(rows, cols);
+  double scalar = randDouble();
 
-  matrix<double> expected = {
-    { 58.0,  64.0, 80.0},
-    {139.0, 154.0, 99.0}
-  };
+  std::string xml_request = "<mul>\n" + formatArgs(mat, scalar) + "</mul>";
 
-  auto result = m1 / 7;
+  auto xml_response = verifier.send_request(xml_request);
+
+  auto expected = parseMatrixResult(xml_response);
+
+  auto result = mat * scalar;
 
   return result == expected;
 }
 
-bool testMatrixMultiplication()
+bool testScalarDivision(Verifier& verifier)
 {
-  matrix<double> m1 = {
-    {1.0, 2.0, 3.0},
-    {4.0, 5.0, 6.0}
-  };
+  std::random_device rand;
+  unsigned int rows = randUint(), cols = randUint();
+  auto mat = generateMatrix(rows, cols);
+  double scalar = randDouble();
 
-  matrix<double> m2 = {
-    { 7.0,  8.0},
-    { 9.0, 10.0},
-    {11.0, 12.0}
-  };
+  std::string xml_request = "<div>\n"  + formatArgs(mat, scalar) + "</div>";
+  
+  auto xml_response = verifier.send_request(xml_request);
 
-  matrix<double> expected = {
-    { 58.0,  64.0},
-    {139.0, 154.0}
-  };
+  auto expected = parseMatrixResult(xml_response);
 
-  matrix<double> result = m1 * m2;
+  auto result = mat / scalar;
 
   return result == expected;
 }
 
-bool testMatrixAddition()
+bool testMatrixMultiplication(Verifier& verifier)
 {
-  matrix<double> m1 = {
-    {1.0, 2.0},
-    {3.0, 4.0}
-  };
+  std::random_device rand;
+  unsigned int m1_rows = randUint(), m1_cols = randUint();
+  unsigned int m2_cols = randUint();
+  auto m1 = generateMatrix(m1_rows, m1_cols); 
+  auto m2 = generateMatrix(m1_cols, m2_cols);
 
-  matrix<double> m2 = {
-    {5.0, 6.0},
-    {7.0, 8.0}
-  };
+  std::string xml_request = "<mul>\n" + formatArgs(m1, m2) + "</mul>";
 
-  matrix<double> expected = {
-    { 6.0,  8.0},
-    {10.0, 12.0}
-  };
+  auto xml_response = verifier.send_request(xml_request);
+
+  auto expected = parseMatrixResult(xml_response);
+
+  auto result = m1 * m2;
+
+  return result == expected;
+}
+
+bool testMatrixAddition(Verifier& verifier)
+{
+  std::random_device rand;
+  unsigned int rows = randUint(), cols = randUint();
+  auto m1 = generateMatrix(rows, cols);
+  auto m2 = generateMatrix(rows, cols);
+
+  auto xml_request = "<add>\n" + formatArgs(m1, m2) + "</add>";
+
+  auto xml_response = verifier.send_request(xml_request);
+
+  auto expected = parseMatrixResult(xml_response);
 
   auto result = m1 + m2;
 
   return result == expected;
 }
 
-bool testMatrixSubtraction()
+bool testMatrixSubtraction(Verifier& verifier)
 {
-  matrix<double> m1 = {
-    {1.0, 2.0},
-    {3.0, 4.0}
-  };
+  std::random_device rand;
+  unsigned int rows = randUint(), cols = randUint();
+  auto m1 = generateMatrix(rows, cols);
+  auto m2 = generateMatrix(rows, cols);
 
-  matrix<double> m2 = {
-    {5.0, 6.0},
-    {7.0, 8.0}
-  };
+  auto xml_request = "<sub>\n" + formatArgs(m1, m2) + "</sub>";
 
-  matrix<double> expected = {
-    {-4.0, -4.0},
-    {-4.0, -4.0}
-  };
+  auto xml_response = verifier.send_request(xml_request);
+
+  auto expected = parseMatrixResult(xml_response);
 
   auto result = m1 - m2;
 
   return result == expected;
 }
 
-bool testTranspose()
+bool testInverse(Verifier& verifier)
 {
-  matrix<double> m1 = {
-    {1.0, 2.0},
-    {3.0, 4.0}
-  };
+  std::random_device rand;
+  unsigned int rows = randUint();
+  auto m = generateMatrix(rows, rows);
 
-  matrix<double> expected = {
-    {1.0, 3.0},
-    {2.0, 4.0}
-  };
+  auto xml_request = "<inv>\n" + formatArg(m) + "</inv>";
 
-  auto result = m1.transpose();
+  auto xml_response = verifier.send_request(xml_request);
 
+  auto expected = parseMatrixResult(xml_response);
+
+  auto result = ~m;
 
   return result == expected;
 }
 
-bool testInverse()
+static bool almostEqual(double a, double b, double epsilon)
 {
-  matrix<double> m1 = {
-    {1.0, 2.0},
-    {3.0, 4.0}
-  };
+  auto threshold = std::numeric_limits<double>::min();
+  auto min = std::min(std::abs(a), std::abs(b));
 
-  matrix<double> expected = {
-    {-2.0,  1.0},
-    { 1.5, -0.5}
-  };
+  if (std::abs(min) == 0.0)
+    return std::abs(a-b) < epsilon;
 
-  auto result = m1.inverse();
-
-  return result == expected;
+  return (std::abs(a-b) / std::max(threshold, min)) < epsilon;
 }
 
-bool testDeterminant()
+bool testDeterminant(Verifier& verifier)
 {
-  matrix<double> m1 = {
-    {1.0, 2.0, 3.0},
-    {4.0, 5.0, 6.0},
-    {7.0, 0.0, 9.0}
-  };
+  std::random_device rand;
+  unsigned int rows = randUint();
+  auto m = generateMatrix(rows, rows);
 
-  double expected = -48.0;
-  double result = m1.determinant();
+  auto xml_request = "<det>\n" + formatArg(m) + "</det>";
 
-  return result == expected;
+  auto xml_response = verifier.send_request(xml_request);
+
+  auto expected = parseScalarResult(xml_response);
+
+  auto result = m.determinant();
+
+  return almostEqual(result, expected, 1e9);
 }

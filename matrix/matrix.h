@@ -3,7 +3,7 @@
 
 #include <initializer_list>
 #include <ostream>
-#include <mutex>
+#include <string>
 #include <optional>
 
 template <typename Num> 
@@ -15,6 +15,7 @@ class matrix
 public:
   matrix<Num>(unsigned int rows, unsigned int cols);
   matrix<Num>(const std::initializer_list<std::initializer_list<Num>>& list);
+  matrix<Num>(std::string csv);
   matrix<Num>(const matrix<Num>& mat);
   ~matrix<Num>();
   const matrix<Num>& operator=(const matrix<Num>& rhs);
@@ -45,6 +46,7 @@ public:
   Num determinant() const;
   static matrix<Num> identity(unsigned int size);
 
+  std::string to_string() const;
   std::ostream& out(std::ostream& os) const;
 
   matrix<Num> minor(unsigned int row, unsigned int col) const;
