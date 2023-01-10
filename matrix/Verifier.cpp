@@ -1,8 +1,8 @@
 #include "Verifier.h"
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #include <unistd.h>
-#include <string>
-#include <cstdlib>
-#include <regex>
+#include <string.h>
 
 Verifier::Verifier(size_t buffer_capacity)
 : capacity(buffer_capacity)
@@ -39,9 +39,7 @@ Verifier::~Verifier()
 std::string Verifier::send_request(const std::string& xml)
 {
   if (send(sock_fd, xml.c_str(), xml.size(), 0) < 0)
-  {
     throw "Failed to send data!";
-  }
 
   memset(buffer, 0, capacity);
 

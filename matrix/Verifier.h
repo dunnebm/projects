@@ -1,8 +1,6 @@
 #ifndef VERIFIER_H
 #define VERIFIER_H
 
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <cstddef>
 #include <string>
 
@@ -12,12 +10,12 @@ template <typename Num> class matrix;
 class Verifier
 {
   char* buffer;
-  std::size_t capacity;
+  size_t capacity;
   int sock_fd;
   bool failed_to_construct = false;
   
 public:
-  Verifier(std::size_t buffer_size);
+  Verifier(size_t buffer_size);
   Verifier(const Verifier& verifier) = delete;
   ~Verifier();
 
