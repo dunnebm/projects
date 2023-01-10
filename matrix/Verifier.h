@@ -4,9 +4,6 @@
 #include <cstddef>
 #include <string>
 
-struct sockaddr_in;
-template <typename Num> class matrix;
-
 class Verifier
 {
   char* buffer;
