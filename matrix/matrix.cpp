@@ -4,10 +4,20 @@
 #include <limits>
 #include <cmath>
 
-using size_t = std::size_t;
+template <typename Num>
+static bool almostEqual(Num a, Num b, Num epsilon)
+{
+  auto threshold = std::numeric_limits<Num>::min();
+  auto min = std::min(std::abs(a), std::abs(b));
+
+  if (std::abs(min) == 0.0)
+    return std::abs(a-b) < epsilon;
+
+  return (std::abs(a-b) / std::max(threshold, min)) < epsilon;
+}
 
 template <typename Num>
-matrix<Num>::matrix(unsigned int rows, unsigned int cols)
+matrix<Num>::matrix(size_t rows, size_t cols)
 :rows(rows), cols(cols)
 {
   // Do not allow dimensions less than 2.
@@ -16,9 +26,9 @@ matrix<Num>::matrix(unsigned int rows, unsigned int cols)
 
   mat = new Num[rows*cols];
 
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       (*this)(i,j) = (Num) 0;
     }
@@ -47,10 +57,10 @@ matrix<Num>::matrix(const std::initializer_list<std::initializer_list<Num>>& lis
   }
 
   iter1 = list.begin();
-  for (unsigned int i = 0; i < rows; ++i, ++iter1)
+  for (size_t i = 0; i < rows; ++i, ++iter1)
   {
     iter2 = iter1->begin();
-    for (unsigned int j = 0; j < cols; ++j, ++iter2)
+    for (size_t j = 0; j < cols; ++j, ++iter2)
     {
       (*this)(i,j) = *iter2;
     }
@@ -73,7 +83,7 @@ matrix<Num>::matrix(std::string csv)
   /* At the start of a new entry all of the flags below are reset */
 
   // This flag is raised when a decimal digit is found in an entry.
-  // However, it will be reset if an exponent 'e' is found so it can be reused
+  // However, it is reset if an exponent 'e' is found so it can be reused
   // to detect a number in the exponent
   bool digit_found = false;
 
@@ -170,7 +180,10 @@ matrix<Num>::matrix(std::string csv)
     else if (csv[i] == '\n')
     {
       if (!digit_found && !decimal_found && !sign_found && !exponent_found && col_count == 1)
-        continue; //This is an empty row, so nothing to do 
+        continue; //This is an empty row, so nothing to do
+      
+      if (!digit_found && col_count > 1)
+        throw "Invalid entry";
       
       if (first_row_read && col_count != cols)
         throw "This row does not have the same number of columns as the first row";
@@ -199,8 +212,15 @@ matrix<Num>::matrix(std::string csv)
     // the row count here
     if (i == csv.size() - 1 && csv[i] != '\n')
     {
+      if (!digit_found && !decimal_found && !sign_found && !exponent_found && col_count == 1)
+        continue; //This is an empty row, so nothing to do
+
+      if (!digit_found && col_count > 1)
+        throw "Invalid entry";
+
       if (digit_found && first_row_read && (col_count != cols))
         throw "Every row must have an equal number of columns";
+
       if (digit_found && first_row_read && (col_count == cols))
         ++row_count;
     }
@@ -263,9 +283,9 @@ const matrix<Num>& matrix<Num>::operator=(const matrix<Num>& rhs)
 
   mat = new Num[rows*cols];
 
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       (*this)(i,j) = rhs(i,j);
     }
@@ -357,23 +377,30 @@ matrix<Num> matrix<Num>::inverse() const
 {
   if (rows != cols)
     throw "Not a square matrix!";
+
+  if (almostEqual(determinant(), static_cast<Num>(0.0), std::numeric_limits<Num>::epsilon()))
+    throw "Singular matrix";
   
-  // Augment *this matrix with an identity matrix 
-  // that has the same dimensions.
+  // Augment *this matrix with an identity matrix
+  // Example: 
+  // [M(0,0) M(0,1) M(0,2) 1 0 0]
+  // [M(1,0) M(1,1) M(1,2) 0 1 0]
+  // [M(2,0) M(2,1) M(2,2) 0 0 1]
   matrix<Num> augmat = augment(matrix<Num>::identity(rows));
 
-  // The result of putting the augmented matrix in RREF
-  // is that the identity matrix that was augmented with *this matrix
-  // will now be the inverse of *this.
+  // The result of putting augmat in RREF is:
+  // [1 0 0 inv(0,0) inv(0,1) inv(0,2)]
+  // [0 1 0 inv(1,0) inv(1,1) inv(1,2)]
+  // [0 0 1 inv(2,0) inv(2,1) inv(2,2)]
   augmat = augmat.rref();
 
   matrix<Num> retval(rows, cols);
 
   // The augmented matrix contains two matrices side-by-side; extract
   // right-most matrix because it represents the inverse of *this.
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       retval(i,j) = augmat(i,j+cols);
     }
@@ -387,38 +414,38 @@ matrix<Num> matrix<Num>::rref() const
 {
   matrix<Num> retval(*this);
 
-  for (unsigned int i = 0; i < rows && i < cols; ++i)
+  for (size_t i = 0; i < rows && i < cols; ++i)
   {
     // retval(i,i) == 0 then find a row with col i not equal to zero and
     // add it to row i.
     if (retval(i,i) == 0)
     {
-      for (unsigned int j = 0; j < rows; ++j)
+      for (size_t j = 0; j < rows; ++j)
       {
         // doesn't make sense to add a row with its self
         if (i == j) continue;
 
         if (retval(j,i) != 0)
         {
-          for (unsigned int k = 0; k < cols; ++k)
+          for (size_t k = 0; k < cols; ++k)
             retval(i,k) += retval(j,k);
         }
       }
     }
     
     // perform Guass-Jordan reduction
-    for (unsigned int j = 0; j < rows; ++j)
+    for (size_t j = 0; j < rows; ++j)
     {
-      // Don't reduce row i, and no need to reduce a row if its ith column
-      // is already zero.
+      // Don't zero the ith column of row i, and no need to 
+      // reduce a row if its ith column is already zero.
       if (i == j || retval(j,i) == 0) continue;
 
       Num scale_factor = retval(i,i) / retval(j,i);
 
       // Multiply the scale_factor to the jth row and subtract that
-      // row by ith row. This will have the effect of zeroing the 
+      // row by the ith row. This will have the effect of zeroing the 
       // retval(j,i) entry 
-      for (unsigned int k = 0; k < cols; ++k)
+      for (size_t k = 0; k < cols; ++k)
       {
         retval(j,k) = scale_factor*retval(j,k) - retval(i,k);
       }
@@ -426,13 +453,13 @@ matrix<Num> matrix<Num>::rref() const
   }
 
   // normalize
-  for (unsigned int i = 0; i < rows && i < cols; ++i)
+  for (size_t i = 0; i < rows && i < cols; ++i)
   {
     if (retval(i,i) == 0) continue;
     
     Num scale_factor = retval(i,i);
 
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       retval(i,j) /= scale_factor;
     }
@@ -449,14 +476,14 @@ matrix<Num> matrix<Num>::augment(const matrix<Num>& mat) const
 
   matrix<Num> retval{rows, cols + mat.cols};
 
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       retval(i,j) = (*this)(i,j);
     }
 
-    for (unsigned int j = 0; j < mat.cols; ++j)
+    for (size_t j = 0; j < mat.cols; ++j)
     {
       retval(i,cols+j) = mat(i,j);
     }
@@ -470,9 +497,9 @@ matrix<Num> matrix<Num>::transpose() const
 {
   matrix<Num> retval{cols, rows};
 
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       retval(j,i) = (*this)(i,j);
     }
@@ -485,7 +512,7 @@ template <typename Num>
 Num matrix<Num>::determinant() const
 {
   if (rows != cols)
-    throw "Dimensions don't match!";
+    throw "Not a sqaure matrix";
 
   if (rows == 2)
   {
@@ -493,7 +520,7 @@ Num matrix<Num>::determinant() const
   }
 
   Num det = 0;
-  for (unsigned int j = 0; j < cols; ++j)
+  for (size_t j = 0; j < cols; ++j)
   {
     det += (*this)(0,j) * cofactor(0,j);
   }
@@ -502,16 +529,16 @@ Num matrix<Num>::determinant() const
 }
 
 template <typename Num>
-matrix<Num> matrix<Num>::minor(unsigned int row, unsigned int col) const
+matrix<Num> matrix<Num>::minor(size_t row, size_t col) const
 {
   matrix<Num> retval{rows - 1, cols - 1};
-  unsigned int m = 0, n = 0;
+  size_t m = 0, n = 0;
 
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
     if (i == row) continue;
 
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       if (j == col) continue;
 
@@ -528,7 +555,7 @@ matrix<Num> matrix<Num>::minor(unsigned int row, unsigned int col) const
 }
 
 template <typename Num>
-Num matrix<Num>::cofactor(unsigned int row, unsigned int col) const
+Num matrix<Num>::cofactor(size_t row, size_t col) const
 {
   Num sign = ((row + col)%2 == 0)? 1 : -1;
 
@@ -540,9 +567,9 @@ matrix<Num> matrix<Num>::operator+(const Num& num) const
 {
   matrix retval(*this);
 
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       retval(i,j) += num;
     }
@@ -556,9 +583,9 @@ matrix<Num> matrix<Num>::operator-(const Num& num) const
 {
   matrix retval(*this);
 
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       retval(i,j) -= num;
     }
@@ -572,9 +599,9 @@ matrix<Num> matrix<Num>::operator*(const Num& num) const
 {
   matrix retval(*this);
 
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       retval(i,j) *= num;
     }
@@ -588,27 +615,15 @@ matrix<Num> matrix<Num>::operator/(const Num& num) const
 {
   matrix retval(*this);
 
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       retval(i,j) /= num;
     }
   }
 
   return retval;
-}
-
-template <typename Num>
-static bool almostEqual(Num a, Num b, Num epsilon)
-{
-  auto threshold = std::numeric_limits<Num>::min();
-  auto min = std::min(std::abs(a), std::abs(b));
-
-  if (std::abs(min) == 0.0)
-    return std::abs(a-b) < epsilon;
-
-  return (std::abs(a-b) / std::max(threshold, min)) < epsilon;
 }
 
 template <typename Num>
@@ -619,9 +634,9 @@ bool matrix<Num>::operator==(const matrix<Num>& rhs) const
 
   auto epsilon = std::numeric_limits<Num>::epsilon();
 
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       almostEqual((*this)(i,j), rhs(i,j), epsilon);
     }
@@ -641,9 +656,9 @@ matrix<Num> matrix<Num>::identity(unsigned int size)
 {
   matrix<Num> retval(size, size);
 
-  for (unsigned int i = 0; i < size; ++i)
+  for (size_t i = 0; i < size; ++i)
   {
-    for (unsigned int j = 0; j < size; ++j)
+    for (size_t j = 0; j < size; ++j)
     {
       if (i == j)
         retval(i,j) = static_cast<Num>(1);
@@ -659,9 +674,9 @@ template <typename Num>
 std::string matrix<Num>::to_string() const
 {
   std::string str;
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       str += std::to_string(static_cast<double>((*this)(i,j)));
       if (j < cols - 1)
@@ -675,9 +690,9 @@ std::string matrix<Num>::to_string() const
 template <typename Num>
 std::ostream& matrix<Num>::out(std::ostream& os) const
 {
-  for (unsigned int i = 0; i < rows; ++i)
+  for (size_t i = 0; i < rows; ++i)
   {
-    for (unsigned int j = 0; j < cols; ++j)
+    for (size_t j = 0; j < cols; ++j)
     {
       if (j == cols - 1)
         os << (*this)(i,j);
