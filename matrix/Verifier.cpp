@@ -22,6 +22,7 @@ Verifier::Verifier(size_t buffer_capacity)
   if (connect(sock_fd, (struct sockaddr*)&server, sizeof(server)) < 0)
   {
     failed_to_construct = true;
+    close(sock_fd);
     return;
   }
 
