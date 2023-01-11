@@ -1,7 +1,8 @@
 -- Author: Brandon Dunne
 
 -- This component handles the logic of calculating
--- the address and byte lanes to read from.
+-- the address and byte lanes, and reads the data from 
+-- RAM and sends it to the master.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -27,6 +28,7 @@ entity axi_read_transfer_controller is
     rvalid: out std_logic;
     rready: in std_logic;
 
+    -- These ports connect to ram
     ram_read_address: out std_logic_vector(15 downto 0);
     ram_read_data: in std_logic_vector(31 downto 0)
   );

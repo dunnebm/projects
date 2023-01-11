@@ -1,7 +1,8 @@
 -- Author: Brandon Dunne
 
 -- This component handles the logic of calculating the
--- address and byte_enable for the next data write too.
+-- address and byte_enable, and writing data from the master
+-- to RAM
 
 library ieee;
 use ieee.std_logic_1164.all;
