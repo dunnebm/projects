@@ -1,0 +1,152 @@
+#ifndef ADC_H
+#define ADC_H
+
+#include <stdint.h>
+
+// ADC123_IN0 -> PA0
+// ADC123_IN1 -> PA1
+// ADC123_IN2 -> PA2
+// ADC123_IN3 -> PA3
+// ADC12_IN4 -> PA4
+// ADC12_IN5 -> PA5
+// ADC12_IN6 -> PA6
+// ADC12_IN7 -> PA7
+// ADC12_IN8 -> PB0
+// ADC12_IN9 -> PB1
+// ADC123_IN10 -> PC0
+// ADC123_IN11 -> PC1
+// ADC123_IN12 -> PC2
+// ADC123_IN13 -> PC3
+// ADC12_IN14 -> PC4
+// ADC12_IN15 -> PC5
+
+// ADC3_IN4 -> PF6
+// ADC3_IN5 -> PF7
+// ADC3_IN6 -> PF8
+// ADC3_IN7 -> PF9
+// ADC3_IN8 -> PF10
+// ADC3_IN9 -> PF3
+// ADC3_IN14 -> PF4
+// ADC3_IN15 -> PF5
+
+#define ADC_ANALOG_WATCHDOG_FLAG (1<<0)
+#define ADC_END_OF_CONVERSION_FLAG (1<<1)
+#define ADC_INJECTED_END_OF_CONVERSION_FLAG (1<<2)
+#define ADC_INJECTED_START_FLAG (1<<3)
+#define ADC_START_FLAG (1<<4)
+#define ADC_OVERRUN_ERROR_FLAG (1<<5)
+#define ADC_ALL_FLAGS (ADC_ANALOG_WATCHDOG_FLAG | ADC_END_OF_CONVERSION_FLAG | \
+                       ADC_INJECTED_END_OF_CONVERSION_FLAG | ADC_INJECTED_START_FLAG | \
+                       ADC_START_FLAG | ADC_OVERRUN_ERROR_FLAG) 
+
+typedef enum {
+  ADC1 = 0x40012000,
+  ADC2 = 0x40012100,
+  ADC3 = 0x40012200
+} ADC;
+
+typedef enum {
+  ADC_CHANNEL0 = 0,
+  ADC_CHANNEL1,
+  ADC_CHANNEL2,
+  ADC_CHANNEL3,
+  ADC_CHANNEL4,
+  ADC_CHANNEL5,
+  ADC_CHANNEL6,
+  ADC_CHANNEL7,
+  ADC_CHANNEL8,
+  ADC_CHANNEL9,
+  ADC_CHANNEL10,
+  ADC_CHANNEL11,
+  ADC_CHANNEL12,
+  ADC_CHANNEL13,
+  ADC_CHANNEL14,
+  ADC_CHANNEL15,
+  ADC_CHANNEL16,
+  ADC_CHANNEL17,
+  ADC_CHANNEL18
+} ADCChannel;
+
+#define ADC_SAMPLING_TIME_3_CYCLES 0u
+#define ADC_SAMPLING_TIME_15_CYCLES 1u
+#define ADC_SAMPLING_TIME_28_CYCLES 2u
+#define ADC_SAMPLING_TIME_56_CYCLES 3u
+#define ADC_SAMPLING_TIME_84_CYCLES 4u
+#define ADC_SAMPLING_TIME_112_CYCLES 5u
+#define ADC_SAMPLING_TIME_144_CYCLES 6u
+#define ADC_SAMPLING_TIME_480_CYCLES 7u
+
+#define ADC_RESOLUTION_12_BIT 0u
+#define ADC_RESOLUTION_10_BIT 1u
+#define ADC_RESOLUTION_8_BIT 2u
+#define ADC_RESOLUTION_6_BIT 3u
+
+#define ADC_TRIGGER_DETECTION_DISABLED 0u
+#define ADC_TRIGGER_DETECTION_RISING_EDGE 1u
+#define ADC_TRIGGER_DETECTION_FALLING_EDGE 2u
+#define ADC_TRIGGER_DETECTION_BOTH_EDGES 3u
+
+#define ADC_EXTERNAL_TRIGGER_TIM1_CH1_EVENT 0u
+#define ADC_EXTERNAL_TRIGGER_TIM1_CH2_EVENT 1u
+#define ADC_EXTERNAL_TRIGGER_TIM1_CH3_EVENT 2u
+#define ADC_EXTERNAL_TRIGGER_TIM2_CH2_EVENT 3u
+#define ADC_EXTERNAL_TRIGGER_TIM2_CH3_EVENT 4u
+#define ADC_EXTERNAL_TRIGGER_TIM2_CH4_EVENT 5u
+#define ADC_EXTERNAL_TRIGGER_TIM2_TRGO_EVENT 6u
+#define ADC_EXTERNAL_TRIGGER_TIM3_CH1_EVENT 7u
+#define ADC_EXTERNAL_TRIGGER_TIM3_TRGO_EVENT 8u
+#define ADC_EXTERNAL_TRIGGER_TIM4_CH4_EVENT 9u
+#define ADC_EXTERNAL_TRIGGER_TIM5_CH1_EVENT 10u
+#define ADC_EXTERNAL_TRIGGER_TIM5_CH2_EVENT 11u
+#define ADC_EXTERNAL_TRIGGER_TIM5_CH3_EVENT 12u
+#define ADC_EXTERNAL_TRIGGER_TIM8_CH1_EVENT 13u
+#define ADC_EXTERNAL_TRIGGER_TIM8_TRGO_EVENT 14u
+#define ADC_EXTERNAL_TRIGGER_EXTI_11 15u
+
+#define ADC_CONVERSION_MODE_SINGLE 0u
+#define ADC_CONVERSION_MODE_CONTINUOUS 1u
+
+#define ADC_DATA_ALIGNMENT_RIGHT_ALIGNED 0u
+#define ADC_DATA_ALIGNMENT_LEFT_ALIGNED 1u
+
+#define ADC_DMA_MODE_DISABLED 0u
+#define ADC_DMA_MODE_ENABLED 1u
+
+#define ADC_SCAN_MODE_ENABLED 0u
+#define ADC_SCAN_MODE_DISABLED 1u
+
+#define ADC_EOC_SET_AFTER_SEQUENCE_OF_REGULAR_CONVERSIONS 0u
+#define ADC_EOC_SET_AFTER_EACH_REGULAR_CONVERSION 1u
+
+#define ADC_DMA_TRANSFER_SELECTION_SINGLE 0u
+#define ADC_DMA_TRANSFER_SELECTION_CONTINUOUS 1u
+
+typedef struct {
+  uint32_t resolution;
+  uint32_t triggerDetection;
+  uint32_t trigger;
+  uint32_t dataAlignment;
+  uint32_t DMATransferSelection;
+  uint32_t DMAMode;
+  uint32_t SCANMode;
+  uint32_t conversionMode;
+  uint32_t EOCSelect;
+  uint32_t AWDChannelSelect; // select channel for the analog watchdog to watch
+} ADCConfiguration;
+
+void ADC_enable(ADC adc);
+void ADC_disable(ADC adc);
+void ADC_configure(ADC adc, const ADCConfiguration* pConfig);
+void ADC_getConfiguration(ADC adc, ADCConfiguration* pConfig);
+void ADC_start(ADC adc);
+void ADC_startDMATransfer(ADC adc);
+void ADC_setSequence(ADC adc, ADCChannel sequence[], uint8_t size);
+void ADC_setChannelSamplingTime(ADC adc, ADCChannel channel, uint32_t cycles);
+uint32_t ADC_getFlags(ADC adc);
+uint32_t ADC_clearFlags(ADC adc, uint32_t flags);
+uint32_t ADC_read(ADC adc);
+void ADC_enableInterrupts(ADC adc, uint32_t flags);
+void ADC_disableInterrupts(ADC adc, uint32_t flags);
+uint32_t ADC_getDataRegisterAddr(ADC adc);
+
+#endif
