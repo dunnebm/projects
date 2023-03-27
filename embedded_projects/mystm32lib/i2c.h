@@ -17,8 +17,8 @@ void I2C_enableClock(I2C i2c);
 void I2C_disableClock(I2C i2c);
 void I2C_start(I2C i2c);
 void I2C_setAddr(I2C i2c);
-int I2C_write(I2C i2c, const char* buf, int len);
-int I2C_read(I2C i2c, char* buf, int len);
+int I2C_write(I2C i2c, uint8_t regAddr, const uint8_t* buf, int len);
+int I2C_read(I2C i2c, uint8_t regAddr, uint8_t* buf, int len);
 
 #ifdef __cplusplus
 }

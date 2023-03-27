@@ -30,6 +30,18 @@ exti.o: exti.c exti.h
 syscfg.o: syscfg.c syscfg.h
 	arm-none-eabi-gcc $(CFLAGS) $< -o $@
 
+fmc.o: fmc.c fmc.h
+	arm-none-eabi-gcc $(CFLAGS) $< -o $@
+
+dcmi.o: dcmi.c dcmi.h
+	arm-none-eabi-gcc $(CFLAGS) $< -o $@
+
+i2c.o: i2c.c i2c.h
+	arm-none-eabi-gcc $(CFLAGS) $< -o $@
+
+spi.o: spi.c spi.h
+	arm-none-eabi-gcc $(CFLAGS) $< -o $@
+
 libmystm32.a: $(OBJ)
 	arm-none-eabi-ar -rcs $@ $(OBJ)
 	

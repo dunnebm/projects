@@ -78,6 +78,36 @@ void GPIO_disableClock(GPIO gpio)
   }
 }
 
+void GPIO_write(GPIO base, uint32_t val)
+{
+  struct GPIO_regs* regs = (struct GPIO_regs*) base;
+  regs->odr = (uint16_t) val;
+}
+
+void GPIO_set(GPIO base, uint32_t pin_mask)
+{
+  struct GPIO_regs* regs = (struct GPIO_regs*) base;
+  regs->bsrr = pin_mask << 16;
+}
+
+void GPIO_clear(GPIO base, uint32_t pin_mask)
+{
+  struct GPIO_regs* regs = (struct GPIO_regs*) base;
+  regs->bsrr = pin_mask & 0xffff;
+}
+
+uint32_t GPIO_readOutputData(GPIO base)
+{
+  struct GPIO_regs* regs = (struct GPIO_regs*) base;
+  return regs->odr;
+}
+
+uint32_t GPIO_readInputData(GPIO base)
+{
+  struct GPIO_regs* regs = (struct GPIO_regs*) base;
+  return regs->idr;
+}
+
 void GPIO_setMode(GPIO base, GPIO_PINS pin_mask, GPIO_MODE mode)
 {
   struct GPIO_regs* regs = (struct GPIO_regs*) base;

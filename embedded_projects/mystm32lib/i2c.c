@@ -105,31 +105,59 @@ void I2C_disableClock(I2C i2c)
   }
 }
 
-int I2C_read(I2C base, char* buf, int len)
+int I2C_read(I2C base, uint8_t regAddr, uint8_t* buf, int len)
 {
   struct I2C_regs* regs = (struct I2C_regs*) base;
 
-  // master receiver mode
-  regs->oar1 |= I2C_OAR1_ADD0_BIT;
+  // master transmitter mode to specify which register to read from
+  regs->oar1 &= ~I2C_OAR1_ADD0_BIT;
   // start communication
   regs->cr1 |= I2C_CR1_START_BIT;
 
-  for (int i = 0; i < len; ++i)
+  while (1)
   {
     uint32_t status = regs->sr1;
     if (status & I2C_SR1_AF_BIT)
       return -1;
-    else if (status & I2C_SR1_RXNE_BIT)
+
+    if (status & I2C_SR1_TXE_BIT)
+      break;
+  }
+  
+  regs->dr = regAddr;
+
+  // master receiver mode
+  regs->oar1 |= I2C_OAR1_ADD0_BIT;
+
+  // start communication reading from regAddr
+  regs->cr1 |= I2C_CR1_START_BIT;
+
+  // wait until address is sent, and make sure it was
+  // acknowledged
+  while (1)
+  {
+    uint32_t status = regs->sr1;
+    if (status & I2C_SR1_AF_BIT)
+      return -1;
+
+    if (status & I2C_SR1_ADDR_BIT)
+      break;
+  }
+
+  for (int i = 0; i < len; ++i)
+  {
+    if (regs->sr1 & I2C_SR1_RXNE_BIT)
       buf[i] = regs->dr;
   }
 }
 
-int I2C_write(I2C base, const char* buf, int len)
+int I2C_write(I2C base, uint8_t regAddr, const uint8_t* buf, int len)
 {
   struct I2C_regs* regs = (struct I2C_regs*) base;
 
   // transmitter mode
   regs->oar1 &= ~I2C_OAR1_ADD0_BIT;
+
   // start communication
   regs->cr1 |= I2C_CR1_START_BIT;
 

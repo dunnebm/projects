@@ -111,6 +111,11 @@ struct gpio_resource {
 
 void GPIO_enableClock(GPIO gpio);
 void GPIO_disableClock(GPIO gpio);
+void GPIO_write(GPIO gpio, uint32_t val);
+void GPIO_set(GPIO gpio, uint32_t pin_mask);
+void GPIO_clear(GPIO gpio, uint32_t pin_mask);
+uint32_t GPIO_readOutputData(GPIO gpio);
+uint32_t GPIO_readInputData(GPIO gpio);
 void GPIO_setMode(GPIO gpio, GPIO_PINS pin_mask, GPIO_MODE mode);
 void GPIO_setOutputType(GPIO gpio, GPIO_PINS pin_mask, GPIO_OUTPUT_TYPE otype);
 void GPIO_setOutputSpeed(GPIO gpio, GPIO_PINS pins, GPIO_OUTPUT_SPEED ospeed);
