@@ -4,17 +4,17 @@
 
 void display_init()
 {
-  // Configure PB14 as MISO and PB15 as MOSI
+  // Configure PB14 as MISO, PB15 as MOSI, and PB10 as SCL
   GPIO_enableClock(GPIOB);
-  GPIO_setMode(GPIOB, GPIO_PIN_14 | GPIO_PIN_15, GPIO_MODE_ALT_FUNC);
-  GPIO_setAltFunc(GPIOB, GPIO_PIN_14 | GPIO_PIN_15, GPIO_ALT_FUNC_5);
+  GPIO_setMode(GPIOB, GPIO_PIN_10 | GPIO_PIN_14 | GPIO_PIN_15, GPIO_MODE_ALT_FUNC);
+  GPIO_setAltFunc(GPIOB, GPIO_PIN_10 | GPIO_PIN_14 | GPIO_PIN_15, GPIO_ALT_FUNC_5);
   
-  // Configure PB8 as D/CX and PB7 as CS
-  GPIO_setMode(GPIOB, GPIO_PIN_8, GPIO_MODE_OUTPUT);
-  GPIO_setOutputType(GPIOB, GPIO_PIN_8, GPIO_OUTPUT_TYPE_PUSH_PULL);
+  // Configure PB8 as D/CX, PB5 as CS, and PB6 as RST
+  GPIO_setMode(GPIOB, GPIO_PIN_8 | GPIO_PIN_5 | GPIO_PIN_6, GPIO_MODE_OUTPUT);
+  GPIO_setOutputType(GPIOB, GPIO_PIN_8 | GPIO_PIN_5 | GPIO_PIN_6, GPIO_OUTPUT_TYPE_PUSH_PULL);
 
-  // Set PB7 as high because the chip-select is active low
-  GPIO_set(GPIOB, GPIO_PIN_7);
+  // Set CS and RST high because they are active low
+  GPIO_set(GPIOB, GPIO_PIN_7 | GPIO_PIN_5);
 
   SPI_enableClock(SPI2);
 
