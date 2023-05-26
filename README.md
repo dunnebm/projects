@@ -31,3 +31,5 @@
   - HAL driver development
   - DMA and interrupt-driven programing
   - I2C was used to send commands to the camera
+
+![](max10_fpga_projects/lcd_and_camera/LCD_camera_diagram.svg)
