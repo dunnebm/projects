@@ -36,11 +36,10 @@ Skills used:
 - Verification using a VHDL testbench with OSVVM library
 
 ## Matrix
-This project implementats a matrix class using C++. To test the class, I decided to use the
-Numpy (a Python library) because it gives me an excuse to practice Python scripting and socket programming.
-The Python script sets up a server and waits for the test program to send request. These request are the matrix operands
-and the type of operation. With this information, the server performs the desired
-operation on the desired matrices, and sends back the result.
+This project implementats a matrix class using C++. To test the class, I decided to use Numpy (a Python library) 
+because it gives me an excuse to practice Python scripting and socket programming. The Python script sets up a server 
+and waits for the test program to send request. These request are the matrix operands and the type of operation. 
+With this information, the server performs the desired operation on the desired matrices, and sends back the result.
   
 Skill used:
 - C++
