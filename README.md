@@ -1,6 +1,19 @@
 # Repository Outline
 
 ## ARM Cortex-m4 projects
+
+Skills used:
+- C programming
+- custom linker script
+- custom startup code
+- GPIO
+- Timer used as a pulse-width-modulator for driving servo motors
+- Timer used as trigger for periodic ADC sampling
+- ADC
+- DMA
+- SPI
+- I2C
+
 ### lcd
 This project tests the ILI9896 LCD's SPI interface by drawing a red square. The SPI interface is located in
 the mystm32lib directory
