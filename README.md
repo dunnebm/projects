@@ -15,7 +15,7 @@ Skills used:
 - I2C
 
 ### lcd
-This project tests the ILI9896 LCD's SPI interface by drawing a red square. The SPI interface is located in
+This project tests the ILI9486 LCD's SPI interface by drawing a red square. The SPI interface is located in
 the mystm32lib directory
 
 ### mystm32lib
