@@ -1,0 +1,6 @@
+#!/bin/bash
+
+bsp_dir=./lcd_camera_bsp
+settings_bsp=./settings.bsp
+
+nios2-bsp-generate-files.exe --bsp-dir=$bsp_dir --settings=$settings_bsp

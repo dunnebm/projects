@@ -1,0 +1,6 @@
+#!/bin/bash
+
+app_dir=./lcd_camera
+src_files=$@
+
+nios2-app-update-makefile.exe --app-dir=$app_dir --add-src-files=$src_files

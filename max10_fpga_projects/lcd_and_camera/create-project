@@ -1,0 +1,21 @@
+#!/bin/bash
+
+project_name=$1
+bsp_str=_bsp
+app_dir=./$project_name
+bsp_dir=./$project_name$bsp_str
+sopc_dir="C:/intelfpga_lite/20.1/university_program/computer_systems/de10-lite/de10-lite_computer/verilog/LCD_Camera_Computer_System/"
+tcl_script="C:/intelfpga_lite/20.1/nios2eds/sdk2/bin/bsp-set-defaults.tcl"
+
+if [ ! -d bsp_dir ]
+then
+  mkdir $bsp_dir
+fi
+
+nios2-bsp-create-settings.exe --bsp-dir=$bsp_dir  \
+                          --sopc=$sopc_dir/$2     \
+                          --type=HAL              \
+                          --settings=settings.bsp \
+                          --script=$tcl_script    
+
+nios2-app-generate-makefile.exe --bsp-dir=$bsp_dir --app-dir=$app_dir --no-src

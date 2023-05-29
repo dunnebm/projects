@@ -1,0 +1,5 @@
+#!/bin/bash
+
+tcl_script=$1
+
+nios2-bsp-update-settings.exe --settings=settings.bsp --script=$tcl_script

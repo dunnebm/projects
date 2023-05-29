@@ -42,6 +42,8 @@ begin
   csx_n <= write_n;
   data <= writedata;
 
+  -- When write_n drops, waitrequest_n drops for 50ns.
+  -- Note, waitrequest_n drops on the same cycle as write_n
   waitrequest_pulse: entity work.mealy_pulse_generator
     port map (
       clk => clk,
@@ -51,6 +53,8 @@ begin
       dout => waitrequest_n
     );
 
+  -- When write_n drops, wrx_n drops one cycle later, and holds
+  -- for 50 ns.
   wrx_n_pulse: entity work.pulse_generator
     port map (
       clk => clk,
